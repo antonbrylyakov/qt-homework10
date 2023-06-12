@@ -79,11 +79,15 @@ void TCPclient::SendRequest(ServiceHeader head)
 */
 void TCPclient::SendData(ServiceHeader head, QString str)
 {
-    QByteArray ba;
-    QDataStream outStr(&ba, QIODevice::WriteOnly);
-    outStr << head;
-    outStr << str;
-    socket->write(ba);
+    QByteArray baHead;
+    QDataStream outStrHead(&baHead, QIODevice::WriteOnly);
+    QByteArray baData;
+    QDataStream outStrData(&baData, QIODevice::WriteOnly);
+    outStrData << str;
+    head.len = baData.size();
+    outStrHead << head;
+    socket->write(baHead);
+    socket->write(baData);
 }
 
 /*
@@ -185,14 +189,31 @@ void TCPclient::ProcessingData(ServiceHeader header, QDataStream &stream)
             }
             break;
         case GET_SIZE:
+            {
+                uint32_t size;
+                stream >> size;
+                emit sig_sendFreeSize(size);
+            }
+            break;
         case GET_STAT:
             {
                 StatServer st;
                 stream >> st;
                 emit sig_sendStat(st);
             }
+            break;
         case SET_DATA:
+            {
+                QString str;
+                stream >> str;
+                emit sig_SendReplyForSetData(str);
+            }
+            break;
         case CLEAR_DATA:
+            {
+                emit sig_Success(header.idData);
+            }
+            break;
         default:
             return;
 

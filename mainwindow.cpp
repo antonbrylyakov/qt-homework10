@@ -36,7 +36,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(client, &TCPclient::sig_sendTime, this, &MainWindow::DisplayTime);
     connect(client, &TCPclient::sig_sendStat, this, &MainWindow::DisplayStat);
     connect(client, &TCPclient::sig_Error, this, &MainWindow::DisplayError);
-
+    connect(client, &TCPclient::sig_Success, this, &MainWindow::DisplaySuccess);
+    connect(client, &TCPclient::sig_sendFreeSize, this, &MainWindow::DisplayFreeSpace);
+    connect(client, &TCPclient::sig_SendReplyForSetData, this, &MainWindow::SetDataReply);
  /*
   * Соединяем сигналы со слотами
  */
@@ -58,12 +60,14 @@ void MainWindow::DisplayTime(QDateTime time)
 }
 void MainWindow::DisplayFreeSpace(uint32_t freeSpace)
 {
-
+    ui->tb_result->append(QString("Свободное место на сервете, байт - %1").arg(freeSpace));
 }
+
 void MainWindow::SetDataReply(QString replyString)
 {
-
+    ui->tb_result->append(QString("Ответ данных с сервера - %1").arg(replyString));
 }
+
 void MainWindow::DisplayStat(StatServer stat)
 {
     ui->tb_result->append("Статистика сервера:");
@@ -93,6 +97,8 @@ void MainWindow::DisplaySuccess(uint16_t typeMess)
 {
     switch (typeMess) {
     case CLEAR_DATA:
+        ui->tb_result->append("Сервер подтвердил успешную очистку данных");
+        break;
     default:
         break;
     }
@@ -166,24 +172,35 @@ void MainWindow::on_pb_request_clicked()
        //Получить время
        case 0:
             header.idData = GET_TIME;
+            client->SendRequest(header);
        break;
        //Получить статистику
        case 2:
             header.idData = GET_STAT;
+            client->SendRequest(header);
        break;
        //Получить свободное место
        case 1:
+            header.idData = GET_SIZE;
+            client->SendRequest(header);
+       break;
        //Отправить данные
        case 3:
+            header.idData = SET_DATA;
+            client->SendData(header, ui->le_data->text());
+       break;
        //Очистить память на сервере
        case 4:
+            header.idData = CLEAR_DATA;
+            client->SendRequest(header);
+       break;
        default:
-       ui->tb_result->append("Такой запрос не реализован в текущей версии");
+            ui->tb_result->append("Такой запрос не реализован в текущей версии");
        return;
 
    }
 
-   client->SendRequest(header);
+
 
 }
 
